@@ -15,7 +15,7 @@ attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose",
 raw_data = df.values
 classes = raw_data[:-2,-1]
 classes = list(set(classes))
-
+#print(raw_data)
 classNames = {"low risk":1,"mid risk":2, "high risk":3}
 y = np.asarray([classNames[value] for value in raw_data[:,-1]])
 
@@ -56,7 +56,11 @@ for i in range(K):
 #Substract the mean and divide with standard deviation
 X = raw_data - np.ones((N,1))*raw_data.mean(axis=0)
 for i in range(M):
-    X[:i] = X[:i]*(1/std[i])
+    X[:,i] = X[:,i]*(1/std[i])
+    
+for i in range(N):
+    for j in range(M):
+        X[i][j]=round(X[i][j],5)
 #print(X)
 #X = X * (1 / np.std(X, 0))
 # Uncomment
