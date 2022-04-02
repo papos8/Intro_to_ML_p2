@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
 from project1 import data_import
+from sklearn.dummy import DummyClassifier
 
 #Importing X matrix from project1
 X_raw = data_import()
@@ -31,7 +32,7 @@ clf1 = LogisticRegression(solver='newton-cg',
                           random_state=1)
 clf2 = KNeighborsClassifier(algorithm='ball_tree',
                             leaf_size=50)
-
+clf3 = DummyClassifier(strategy = "most_frequent")
 
 # Building the pipelines
 pipe1 = Pipeline([('std', StandardScaler()),
@@ -39,7 +40,7 @@ pipe1 = Pipeline([('std', StandardScaler()),
 
 pipe2 = Pipeline([('std', StandardScaler()),
                   ('clf2', clf2)])
-
+pipe3 = Pipeline([('clf3', clf3)])
 
 
 # Setting up the parameter grids
@@ -48,14 +49,15 @@ param_grid1 = [{'clf1__penalty': ['l2'],
 
 param_grid2 = [{'clf2__n_neighbors': list(range(1, 10)),
                 'clf2__p': [1, 2]}]
+param_grid3 = [{}]
 
 # Setting up multiple GridSearchCV objects, 1 for each algorithm
 gridcvs = {}
 inner_cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=1)
 
-for pgrid, est, name in zip((param_grid1, param_grid2),
-                            (pipe1, pipe2),
-                            ('Logistic Regression', 'KNN')):
+for pgrid, est, name in zip((param_grid1, param_grid2, param_grid3),
+                            (pipe1, pipe2, pipe3),
+                            ('Logistic Regression', 'KNN', 'Baseline')):
     gcv = GridSearchCV(estimator=est,
                        param_grid=pgrid,
                        scoring='accuracy',
@@ -140,3 +142,12 @@ test_acc = accuracy_score(y_true=y_test, y_pred=gcv_model_select.predict(X_test)
 
 print('Training Accuracy: %.2f%%' % (100 * train_acc))
 print('Test Accuracy: %.2f%%' % (100 * test_acc))
+
+
+#BASELINE MODEL
+
+#Calculate biggest class
+
+
+
+
