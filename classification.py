@@ -11,7 +11,7 @@ from project1 import data_import
 from sklearn.dummy import DummyClassifier
 
 
-errors = []
+
 #Importing X matrix from project1
 X_raw = data_import()
 attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose", 
@@ -26,6 +26,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     random_state=1,
                                                     stratify=y)
 
+#Initializing error array
+errors = []
 
 # Initializing Classifiers
 clf1 = LogisticRegression(solver='newton-cg',
@@ -99,10 +101,9 @@ for name, gs_est in sorted(gridcvs.items()):
         print('\n        Best ACC (avg. of inner test folds) %.2f%%' % (gridcvs[name].best_score_ * 100))
         print('        Best parameters:', gridcvs[name].best_params_)
         
-        # Compute squared error with all features selected (no feature selection)
-        #Error_train[k] = np.sum(y_train != m.predict(X_train))/
-        #Error_test[k] = np.sum(y_test != m.predict(X_test))
+        # Compute error rate
         
+        errors.append(np.sum(m.predict(X_test)!=y_test)/len(y_test))
         
         # perf on test fold (valid_idx)
         outer_scores.append(gridcvs[name].best_estimator_.score(X_train[valid_idx], y_train[valid_idx]))
@@ -112,7 +113,7 @@ for name, gs_est in sorted(gridcvs.items()):
     print('\n    Outer Loop:')
     print('        ACC %.2f%% +/- %.2f' % 
               (np.mean(outer_scores) * 100, np.std(outer_scores) * 100))
-    errors.append(np.sum(m.predict(X_test)!=y_test)/len(y_test))
+    
 
 #Select from the above analysis the best hyperparameters, define them and then run again
 param_grid2 = [{'n_neighbors': list(range(1, 10)),
