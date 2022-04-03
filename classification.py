@@ -80,7 +80,7 @@ for name, gs_est in sorted(gridcvs.items()):
     print('    Inner loop:')
     
     outer_scores = []
-    K=5
+    K=10
     outer_cv = StratifiedKFold(n_splits=K, shuffle=True, random_state=1)
     
     #Initialize error
