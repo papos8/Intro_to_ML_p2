@@ -9,9 +9,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
 from project1 import data_import
 from sklearn.dummy import DummyClassifier
+from sklearn import model_selection
 
 
-errors = []
 #Importing X matrix from project1
 X_raw = data_import()
 attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose", 
@@ -21,11 +21,14 @@ y = X_raw[:,6]
 X = X_raw[:,0:6]# configure the cross-validation procedure
 
 
+CV = model_selection.KFold(10, shuffle=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     test_size=0.2,
                                                     random_state=1,
                                                     stratify=y)
 
+#Initializing error variable
+errors = []
 
 # Initializing Classifiers
 clf1 = LogisticRegression(solver='newton-cg',
@@ -87,7 +90,7 @@ for name, gs_est in sorted(gridcvs.items()):
     Error_test_nofeatures = np.empty((K,1))
     
     k = 0
-    for train_idx, valid_idx in outer_cv.split(X_train, y_train):
+    for train_idx, valid_idx in outer_cv.split(X, y):
         
         # Compute squared error without using the input data at all
         Error_train_nofeatures[k] = np.square(y_train-y_train.mean()).sum()/y_train.shape[0]
@@ -95,24 +98,23 @@ for name, gs_est in sorted(gridcvs.items()):
 
         
         
-        m = gridcvs[name].fit(X_train[train_idx], y_train[train_idx]) # run inner loop hyperparam tuning
+        m = gridcvs[name].fit(X[train_idx], y[train_idx]) # run inner loop hyperparam tuning
         print('\n        Best ACC (avg. of inner test folds) %.2f%%' % (gridcvs[name].best_score_ * 100))
         print('        Best parameters:', gridcvs[name].best_params_)
         
-        # Compute squared error with all features selected (no feature selection)
-        #Error_train[k] = np.sum(y_train != m.predict(X_train))/
-        #Error_test[k] = np.sum(y_test != m.predict(X_test))
+        # Compute error rate
         
+        errors.append(np.sum(m.predict(X_test)!=y_test)/len(y_test))
         
         # perf on test fold (valid_idx)
-        outer_scores.append(gridcvs[name].best_estimator_.score(X_train[valid_idx], y_train[valid_idx]))
+        outer_scores.append(gridcvs[name].best_estimator_.score(X_test, y_test))
         print('        ACC (on outer test fold) %.2f%%' % (outer_scores[-1]*100))
         
         k+=1
     print('\n    Outer Loop:')
     print('        ACC %.2f%% +/- %.2f' % 
               (np.mean(outer_scores) * 100, np.std(outer_scores) * 100))
-    errors.append(np.sum(m.predict(X_test)!=y_test)/len(y_test))
+    
 
 #Select from the above analysis the best hyperparameters, define them and then run again
 param_grid2 = [{'n_neighbors': list(range(1, 10)),
