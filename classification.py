@@ -1,16 +1,16 @@
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+#from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
+#from sklearn.metrics import accuracy_score
 from project1 import data_import
 from sklearn.dummy import DummyClassifier
 from sklearn import model_selection
-
+from sklearn.model_selection import KFold
 
 #Importing X matrix from project1
 X_raw = data_import()
@@ -56,7 +56,7 @@ param_grid3 = [{}]
 
 # Setting up multiple GridSearchCV objects, 1 for each algorithm
 gridcvs = {}
-inner_cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=1)
+inner_cv = KFold(n_splits=10, shuffle=True, random_state=1)
 
 for pgrid, est, name in zip((param_grid1, param_grid2, param_grid3),
                             (pipe1, pipe2, pipe3),
@@ -81,7 +81,7 @@ for name, gs_est in sorted(gridcvs.items()):
     
     outer_scores = []
     K=10
-    outer_cv = StratifiedKFold(n_splits=K, shuffle=True, random_state=1)
+    outer_cv = KFold(n_splits=K, shuffle=True, random_state=1)
     
     #Initialize error
     Error_train = np.empty((K,1))
