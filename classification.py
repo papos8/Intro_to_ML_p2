@@ -1,16 +1,16 @@
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+#from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
+#from sklearn.metrics import accuracy_score
 from project1 import data_import
 from sklearn.dummy import DummyClassifier
 from sklearn import model_selection
-
+from sklearn.model_selection import KFold
 
 #Importing X matrix from project1
 X_raw = data_import()
@@ -56,7 +56,7 @@ param_grid3 = [{}]
 
 # Setting up multiple GridSearchCV objects, 1 for each algorithm
 gridcvs = {}
-inner_cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=1)
+inner_cv = KFold(n_splits=10, shuffle=True, random_state=1)
 
 for pgrid, est, name in zip((param_grid1, param_grid2, param_grid3),
                             (pipe1, pipe2, pipe3),
@@ -80,8 +80,8 @@ for name, gs_est in sorted(gridcvs.items()):
     print('    Inner loop:')
     
     outer_scores = []
-    K=5
-    outer_cv = StratifiedKFold(n_splits=K, shuffle=True, random_state=1)
+    K=10
+    outer_cv = KFold(n_splits=K, shuffle=True, random_state=1)
     
     #Initialize error
     Error_train = np.empty((K,1))
@@ -104,10 +104,10 @@ for name, gs_est in sorted(gridcvs.items()):
         
         # Compute error rate
         
-        errors.append(np.sum(m.predict(X_test)!=y_test)/len(y_test))
+        errors.append(np.sum(m.predict(X[valid_idx])!=y[valid_idx])/len(y[valid_idx]))
         
         # perf on test fold (valid_idx)
-        outer_scores.append(gridcvs[name].best_estimator_.score(X_test, y_test))
+        outer_scores.append(gridcvs[name].best_estimator_.score(X[valid_idx], y[valid_idx]))
         print('        ACC (on outer test fold) %.2f%%' % (outer_scores[-1]*100))
         
         k+=1
@@ -117,39 +117,39 @@ for name, gs_est in sorted(gridcvs.items()):
     
 
 #Select from the above analysis the best hyperparameters, define them and then run again
-param_grid2 = [{'n_neighbors': list(range(1, 10)),
-                'p': [1, 2]}]
+# param_grid2 = [{'n_neighbors': list(range(1, 10)),
+#                 'p': [1, 2]}]
 
 
 
-gcv_model_select = GridSearchCV(estimator=clf2,
-                                param_grid=param_grid2,
-                                scoring='accuracy',
-                                n_jobs=-1,
-                                cv=inner_cv,
-                                verbose=1,
-                                refit=True)
-
-gcv_model_select.fit(X_train, y_train)
-print('Best CV accuracy: %.2f%%' % (gcv_model_select.best_score_*100))
-print('Best parameters:', gcv_model_select.best_params_)
-
-## We can skip the next step because we set refit=True
-## so scikit-learn has already fit the model to the
-## whole training set
+# gcv_model_select = GridSearchCV(estimator=clf3,
+#                                 param_grid=param_grid3,
+#                                 scoring='accuracy',
+#                                 n_jobs=-1,
+#                                 cv=inner_cv,
+#                                 verbose=1,
+#                                 refit=True)
 
 # gcv_model_select.fit(X_train, y_train)
+# print('Best CV accuracy: %.2f%%' % (gcv_model_select.best_score_*100))
+# print('Best parameters:', gcv_model_select.best_params_)
 
-train_acc = accuracy_score(y_true=y_train, y_pred=gcv_model_select.predict(X_train))
-test_acc = accuracy_score(y_true=y_test, y_pred=gcv_model_select.predict(X_test))
+# ## We can skip the next step because we set refit=True
+# ## so scikit-learn has already fit the model to the
+# ## whole training set
 
-print('Training Accuracy: %.2f%%' % (100 * train_acc))
-print('Test Accuracy: %.2f%%' % (100 * test_acc))
+# # gcv_model_select.fit(X_train, y_train)
+
+# train_acc = accuracy_score(y_true=y_train, y_pred=gcv_model_select.predict(X_train))
+# test_acc = accuracy_score(y_true=y_test, y_pred=gcv_model_select.predict(X_test))
+
+# print('Training Accuracy: %.2f%%' % (100 * train_acc))
+# print('Test Accuracy: %.2f%%' % (100 * test_acc))
 
 
-#BASELINE MODEL
+# #BASELINE MODEL
 
-#Calculate biggest class
+# #Calculate biggest class
 
 
 
