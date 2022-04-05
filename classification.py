@@ -11,7 +11,7 @@ from project1 import data_import
 from sklearn.dummy import DummyClassifier
 from sklearn import model_selection
 from sklearn.model_selection import KFold
-
+from toolbox_02450 import mcnemar
 #Importing X matrix from project1
 X_raw = data_import()
 attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose", 
@@ -21,7 +21,7 @@ y = X_raw[:,6]
 X = X_raw[:,0:6]# configure the cross-validation procedure
 
 
-CV = model_selection.KFold(10, shuffle=True)
+CV = model_selection.KFold(10, shuffle=False)
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     test_size=0.2,
                                                     random_state=1,
@@ -69,12 +69,16 @@ for pgrid, est, name in zip((param_grid1, param_grid2, param_grid3),
                        verbose=0,
                        refit=True)
     gridcvs[name] = gcv
+    
+    
+y_true = []
+yhat = []
 #Next, we define the outer loop
 #The training folds from the outer loop will be used in the inner loop for model tuning
 #The inner loop selects the best hyperparameter setting
 #This best hyperparameter setting can be evaluated on both the avg. over the inner test folds and the 1 corresponding test fold of the outer loop
 for name, gs_est in sorted(gridcvs.items()):
-
+   
     print(50 * '-', '\n')
     print('Algorithm:', name)
     print('    Inner loop:')
@@ -91,17 +95,18 @@ for name, gs_est in sorted(gridcvs.items()):
     
     k = 0
     for train_idx, valid_idx in outer_cv.split(X, y):
-        
+          
         # Compute squared error without using the input data at all
         Error_train_nofeatures[k] = np.square(y_train-y_train.mean()).sum()/y_train.shape[0]
         Error_test_nofeatures[k] = np.square(y_test-y_test.mean()).sum()/y_test.shape[0]
 
         
-        
+        dy = []
         m = gridcvs[name].fit(X[train_idx], y[train_idx]) # run inner loop hyperparam tuning
         print('\n        Best ACC (avg. of inner test folds) %.2f%%' % (gridcvs[name].best_score_ * 100))
         print('        Best parameters:', gridcvs[name].best_params_)
         
+       
         # Compute error rate
         
         errors.append(np.sum(m.predict(X[valid_idx])!=y[valid_idx])/len(y[valid_idx]))
@@ -110,11 +115,41 @@ for name, gs_est in sorted(gridcvs.items()):
         outer_scores.append(gridcvs[name].best_estimator_.score(X[valid_idx], y[valid_idx]))
         print('        ACC (on outer test fold) %.2f%%' % (outer_scores[-1]*100))
         
+        yhat.append(m.predict(X[valid_idx]))
+        y_true.append(y[valid_idx])
         k+=1
+    
     print('\n    Outer Loop:')
     print('        ACC %.2f%% +/- %.2f' % 
               (np.mean(outer_scores) * 100, np.std(outer_scores) * 100))
     
+
+yhat_bs = yhat[:10]
+yhat_kn = yhat[10:20]
+yhat_lr = yhat[20:30]
+y_true = y_true[:10]
+alpha = 0.05
+
+print("KNN-Baseline")
+for i in range(10):
+    [thetahat, CI, p] = mcnemar(y_true[i], yhat_kn[i], yhat_bs[i], alpha=alpha)
+    
+
+print()
+print("KNN-Logistic Regression")    
+for i in range(10):
+    [thetahat, CI, p] = mcnemar(y_true[i], yhat_kn[i], yhat_lr[i], alpha=alpha)
+    
+
+print()
+print("Logistic Regression-Baseline")    
+for i in range(10):
+    [thetahat, CI, p] = mcnemar(y_true[i], yhat_lr[i], yhat_bs[i], alpha=alpha)
+    
+    
+    
+    
+
 
 #Select from the above analysis the best hyperparameters, define them and then run again
 # param_grid2 = [{'n_neighbors': list(range(1, 10)),
