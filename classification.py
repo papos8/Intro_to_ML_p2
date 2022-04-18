@@ -106,7 +106,7 @@ for name, gs_est in sorted(gridcvs.items()):
         print('\n        Best ACC (avg. of inner test folds) %.2f%%' % (gridcvs[name].best_score_ * 100))
         print('        Best parameters:', gridcvs[name].best_params_)
         
-       
+        
         # Compute error rate
         
         errors.append(np.sum(m.predict(X[valid_idx])!=y[valid_idx])/len(y[valid_idx]))
@@ -128,6 +128,7 @@ yhat_bs = yhat[:10]
 yhat_kn = yhat[10:20]
 yhat_lr = yhat[20:30]
 y_true = y_true[:10]
+
 alpha = 0.05
 
 print("KNN-Baseline")
@@ -149,6 +150,10 @@ for i in range(10):
     
     
     
+rLogisticRegression = LogisticRegression(C=1/100)
+rLogisticRegression.fit(X_train,y_train)
+p = [[45,110,80,10,100,90],[44,100,70,7,120,90],[50,160,100,10,120,80],[60,110,90,10,80,80]]
+prediction = rLogisticRegression.predict(p)
 
 
 #Select from the above analysis the best hyperparameters, define them and then run again
