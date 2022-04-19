@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn import model_selection
@@ -217,13 +217,15 @@ CV = model_selection.KFold(K, shuffle=True)
 #CV = model_selection.KFold(K, shuffle=False)
 
 # Values
-h_interval = [1,2,4,6,8,10]
+h_interval = [1,10,20,30,40,50]
 lambdas = np.power(10.,range(-5,9))
 max_iter = 10000
 # Initialize variables
 #T = len(lambdas)
 ANN_trainError_vs_h = np.zeros(len(h_interval))
 ANN_testError_vs_h = np.zeros(len(h_interval))
+lr_trainError_vs_lambda = np.zeros(len(lambdas))
+lr_testError_vs_lambda = np.zeros(len(lambdas))
 Error_train_rlr = np.empty((K,1))
 Error_test_rlr = np.empty((K,1))
 
@@ -283,6 +285,8 @@ for train_index, test_index in CV.split(X,y):
     ## regularized linear model
     opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(X_train, y_train, lambdas, internal_cross_validation)
 
+    lr_trainError_vs_lambda += train_err_vs_lambda
+    lr_testError_vs_lambda += test_err_vs_lambda
     # Standardize outer fold based on training set, and save the mean and standard
     # deviations since they're part of the model (they would be needed for
     # making new predictions) - for brevity we won't always store these in the scripts
@@ -314,6 +318,31 @@ for train_index, test_index in CV.split(X,y):
     regression_table = np.concatenate((regression_table,[mse]))
 
     k+=1
+    
 
 regression_table = np.reshape(regression_table, [K,6])
 print(pd.DataFrame(regression_table)) 
+## Plot errors versus regularization factors
+
+min_error = np.min(ANN_testError_vs_h/K) 
+opt_h = h_interval[np.argmin(ANN_testError_vs_h/K)]
+plt.title('Optimal number hidden units: {}'.format(opt_h))
+plt.plot(h_interval,ANN_trainError_vs_h/K,'b.-',h_interval,ANN_testError_vs_h/K,'r.-')
+plt.plot(opt_h, min_error, 'o')
+plt.xlabel('hidden units number')
+plt.ylabel('Squared error (crossvalidation)')
+plt.legend(['Train error','Validation error'])
+plt.grid()
+plt.show()
+
+
+min_error = np.min(lr_testError_vs_lambda/K) 
+opt_lambda = lambdas[np.argmin(lr_testError_vs_lambda/K)]
+plt.title('Optimal lambda: 1e{}'.format(np.log10(opt_lambda)))
+plt.semilogx(lambdas,lr_trainError_vs_lambda/K,'b.-',lambdas,lr_testError_vs_lambda/K,'r.-')
+plt.semilogx(opt_lambda,min_error,"o")
+plt.xlabel('Regularization factor')
+plt.ylabel('Squared error (crossvalidation)')
+plt.legend(['Train error','Validation error'])
+plt.grid()
+plt.show()

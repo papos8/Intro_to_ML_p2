@@ -164,7 +164,7 @@ X = np.concatenate((np.ones((X.shape[0],1)),X),1)
 attributeNames = [u'Offset']+attributeNames
 M = M+1
 
-h = 10
+h = 50
 l = 10
 # K set to 30 in order to fulfill the Central limit theorem
 K = 30
