@@ -190,8 +190,7 @@ def ANN_regularization(X,y,h_interval,cvf,max_iter):
 
 #Load the data in pandas dataframe
 df = pd.read_csv("../Data/MaternalDataset.csv")
-attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose", 
-                  "Body Temperature", "Heart Rate", "Risk Level"]
+
 raw_data = df.values
 classes = raw_data[:-2,-1]
 classes = list(set(classes))
@@ -199,7 +198,9 @@ classes = list(set(classes))
 classNames = {"low risk":1,"mid risk":2, "high risk":3}
 y = np.asarray([classNames[value] for value in raw_data[:,-1]])
 
-X = raw_data[:,:-1]
+# use features selected from regression a part
+attributeNames = ["Systolic BP", "Blood Glucose", "Body Temperature", "Heart Rate", "Risk Level"]
+X = raw_data[:,[1,3,4,5]]
 N,M = X.shape
 
 X = X.astype(float)

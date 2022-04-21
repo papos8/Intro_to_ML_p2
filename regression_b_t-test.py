@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn import model_selection
 import torch
 import scipy.stats as st
+from toolbox_02450 import rlr_validate
 
 
 def train_neural_net(model, loss_fn, X, y,
@@ -144,8 +145,7 @@ def ttest_twomodels(y_true, yhatA, yhatB, alpha=0.05, loss_norm_p=1):
 
 #Load the data in pandas dataframe
 df = pd.read_csv("../Data/MaternalDataset.csv")
-attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose", 
-                  "Body Temperature", "Heart Rate", "Risk Level"]
+
 raw_data = df.values
 classes = raw_data[:-2,-1]
 classes = list(set(classes))
@@ -153,7 +153,9 @@ classes = list(set(classes))
 classNames = {"low risk":1,"mid risk":2, "high risk":3}
 y = np.asarray([classNames[value] for value in raw_data[:,-1]])
 
-X = raw_data[:,:-1]
+# use features selected from regression a part
+attributeNames = ["Systolic BP", "Blood Glucose", "Body Temperature", "Heart Rate", "Risk Level"]
+X = raw_data[:,[1,3,4,5]]
 N,M = X.shape
 
 X = X.astype(float)
@@ -165,15 +167,24 @@ attributeNames = [u'Offset']+attributeNames
 M = M+1
 
 h = 50
-l = 10
-# K set to 30 in order to fulfill the Central limit theorem
-K = 30
+lambdas = [10]
+
+K = 10
 max_iter = 10000
 CV = model_selection.KFold(K, shuffle=True)
 ANN_est = []
 lr_est = []
 base_est = []
 y_true = []
+k=0
+mu = np.empty((K, M-1))
+sigma = np.empty((K, M-1))
+w_rlr = np.empty((M,K))
+Error_test_rlr = np.empty((K,1))
+regression_table = np.array([])
+# Using the generalization error formula for k-fold cross validation
+alpha = 0.05
+loss_norm_p  = 2
 for train_index, test_index in CV.split(X,y):
     
     # extract training and test set for current CV fold
@@ -211,32 +222,60 @@ for train_index, test_index in CV.split(X,y):
     ANN_est = np.append(ANN_est, y_test_est)
     
     ## Linear Regression
+#    Xty = X_train.T @ y_train
+#    XtX = X_train.T @ X_train
+#
+#    # Estimate weights for the optimal value of lambda, on entire training set
+#    lambdaI = l * np.eye(X_train.shape[1])
+#    lambdaI[0,0] = 0 # Do no regularize the bias term
+#    w_rlr = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
+#    
+#    # Compute mean squared error with regularization with optimal lambda
+#    y_test_est = X_test @ w_rlr
+#    lr_est = np.append(lr_est, y_test_est)
+    
+    ## regularized linear model
+    #internal_cross_validation set to 30 in order to fulfill the Central limit theorem   
+    internal_cross_validation = 30
+    opt_val_err, opt_lambda, mean_w_vs_lambda, train_err_vs_lambda, test_err_vs_lambda = rlr_validate(X_train, y_train, lambdas, internal_cross_validation)
+
+    # Standardize outer fold based on training set, and save the mean and standard
+    # deviations since they're part of the model (they would be needed for
+    # making new predictions) - for brevity we won't always store these in the scripts
+    mu[k, :] = np.mean(X_train[:, 1:], 0)
+    sigma[k, :] = np.std(X_train[:, 1:], 0)
+    
+    X_train[:, 1:] = (X_train[:, 1:] - mu[k, :] ) / sigma[k, :] 
+    X_test[:, 1:] = (X_test[:, 1:] - mu[k, :] ) / sigma[k, :] 
+    
     Xty = X_train.T @ y_train
     XtX = X_train.T @ X_train
 
     # Estimate weights for the optimal value of lambda, on entire training set
-    lambdaI = l * np.eye(X_train.shape[1])
+    lambdaI = opt_lambda * np.eye(M)
     lambdaI[0,0] = 0 # Do no regularize the bias term
-    w_rlr = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
-    
-    # Compute mean squared error with regularization with optimal lambda
-    y_test_est = X_test @ w_rlr
+    w_rlr[:,k] = np.linalg.solve(XtX+lambdaI,Xty).squeeze()
+    # Compute estmated y with regularization with optimal lambda
+    y_test_est = X_test @ w_rlr[:,k]
     lr_est = np.append(lr_est, y_test_est)
-
+    
     ## Baseline
     y_test_est = y_train.mean()
     base_est = np.append(base_est, [y_test_est]*len(y_test))
+    
+    
+    
+    print(k+1, "fold")
 
-# Using the generalization error formula for k-fold cross validation
-alpha = 0.05
-loss_norm_p  = 2
-
-print("\nANN vs baseline")
-[zmean_ANN_vs_base, CI_ANN_vs_base, p_ANN_vs_base] = ttest_twomodels(y_true, ANN_est, base_est, alpha, loss_norm_p)
-print(CI_ANN_vs_base,p_ANN_vs_base,sep="\n")
-print("\nLinear regression vs baseline")
-[zmean_lr_vs_base, CI_lr_vs_base, p_lr_vs_base] = ttest_twomodels(y_true, lr_est, base_est, alpha, loss_norm_p)
-print(CI_lr_vs_base,p_lr_vs_base,sep="\n")
-print("\nANN vs Linear regression")
-[zmean_ANN_vs_lr, CI_ANN_vs_lr, p_ANN_vs_lr] = ttest_twomodels(y_true, ANN_est, lr_est, alpha, loss_norm_p)
-print(CI_ANN_vs_lr,p_ANN_vs_lr,sep="\n")
+    print("\nANN vs baseline")
+    [zmean_ANN_vs_base, CI_ANN_vs_base, p_ANN_vs_base] = ttest_twomodels(y_true, ANN_est, base_est, alpha, loss_norm_p)
+    print(CI_ANN_vs_base,p_ANN_vs_base,sep="\n")
+    print("\nLinear regression vs baseline")
+    [zmean_lr_vs_base, CI_lr_vs_base, p_lr_vs_base] = ttest_twomodels(y_true, lr_est, base_est, alpha, loss_norm_p)
+    print(CI_lr_vs_base,p_lr_vs_base,sep="\n")
+    print("\nANN vs Linear regression")
+    [zmean_ANN_vs_lr, CI_ANN_vs_lr, p_ANN_vs_lr] = ttest_twomodels(y_true, ANN_est, lr_est, alpha, loss_norm_p)
+    print(CI_ANN_vs_lr,p_ANN_vs_lr,sep="\n")
+    
+    k += 1
+print("Test end")
