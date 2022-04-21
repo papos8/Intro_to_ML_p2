@@ -11,7 +11,7 @@ from project1 import data_import
 from sklearn.dummy import DummyClassifier
 from sklearn import model_selection
 from sklearn.model_selection import KFold
-
+from toolbox_02450 import feature_selector_lr
 #Importing X matrix from project1
 X_raw = data_import()
 attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose", 
@@ -20,8 +20,8 @@ attributeNames = ["Age", "Systolic BP", "Diastolic BP", "Blood Glucose",
 y = X_raw[:,6]
 X = X_raw[:,0:6]# configure the cross-validation procedure
 
+N, M = X.shape
 
-CV = model_selection.KFold(10, shuffle=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     test_size=0.2,
                                                     random_state=1,
@@ -53,7 +53,7 @@ param_grid1 = [{'clf1__penalty': ['l2'],
 param_grid2 = [{'clf2__n_neighbors': list(range(1, 10)),
                 'clf2__p': [1, 2]}]
 param_grid3 = [{}]
-
+Features = np.zeros((M,10))
 # Setting up multiple GridSearchCV objects, 1 for each algorithm
 gridcvs = {}
 inner_cv = KFold(n_splits=10, shuffle=True, random_state=1)
@@ -96,12 +96,20 @@ for name, gs_est in sorted(gridcvs.items()):
         Error_train_nofeatures[k] = np.square(y_train-y_train.mean()).sum()/y_train.shape[0]
         Error_test_nofeatures[k] = np.square(y_test-y_test.mean()).sum()/y_test.shape[0]
 
-        
+        Features = np.zeros((M,10))
         
         m = gridcvs[name].fit(X[train_idx], y[train_idx]) # run inner loop hyperparam tuning
         print('\n        Best ACC (avg. of inner test folds) %.2f%%' % (gridcvs[name].best_score_ * 100))
         print('        Best parameters:', gridcvs[name].best_params_)
         
+        if name == 'Logistic Regression':
+            
+            textout = ''
+        
+            selected_features, features_record, loss_record = feature_selector_lr(X[train_idx], y[train_idx], 10,display=textout)
+        
+            Features[selected_features,k] = 1
+            print(selected_features)
         # Compute error rate
         
         errors.append(np.sum(m.predict(X[valid_idx])!=y[valid_idx])/len(y[valid_idx]))
